@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { LedgerService } from '../services/ledger.service.js';
 import { TransactionType } from '../types/transaction.js';
+import { BadRequestError } from '../utils/errors.js';
 import { successResponse } from '../utils/response.js';
 
 export class TransactionController {
@@ -11,7 +12,16 @@ export class TransactionController {
       const paramAccountId = Array.isArray(req.params.accountId)
         ? req.params.accountId[0]
         : req.params.accountId;
-      const accountId = paramAccountId || req.body.account_id;
+      const bodyAccountId = req.body.account_id;
+
+      if (paramAccountId && bodyAccountId && paramAccountId !== bodyAccountId) {
+        throw new BadRequestError(
+          `Account ID in URL ('${paramAccountId}') does not match account_id in request body ('${bodyAccountId}')`,
+          'ACCOUNT_ID_MISMATCH'
+        );
+      }
+
+      const accountId = paramAccountId || bodyAccountId;
 
       const result = this.ledgerService.addTransaction({
         ...req.body,

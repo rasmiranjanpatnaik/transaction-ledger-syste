@@ -36,6 +36,7 @@ export const createTransactionSchema = z.object({
     amount: z
       .number({ message: 'Transaction amount must be a number' })
       .positive('Transaction amount must be greater than 0')
+      .max(100_000_000_000, 'Transaction amount cannot exceed $100,000,000,000')
       .refine((val) => Number.isFinite(val), {
         message: 'Transaction amount must be a finite number',
       })
@@ -97,6 +98,7 @@ export const createTransferSchema = z.object({
       amount: z
         .number({ message: 'Transfer amount must be a number' })
         .positive('Transfer amount must be greater than 0')
+        .max(100_000_000_000, 'Transfer amount cannot exceed $100,000,000,000')
         .refine((val) => Number.isFinite(val), {
           message: 'Transfer amount must be a finite number',
         })
