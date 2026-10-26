@@ -363,3 +363,57 @@ npm test
 | `history.test.ts` | Latest-first sorting, credit/debit filtering, multi-page pagination metadata, pagination validation |
 | `transfer.test.ts` | Atomic two-account transfers, insufficient source funds rollback, duplicate transfer reference_id, same-account rejection |
 | `integrity.test.ts` | Prompt example balance progression (0 → +100 → +50 → -30 → -20 = 100), immutability triggers on direct SQL update/delete, 405 Method Not Allowed on HTTP mutation |
+
+
+---
+
+## 11. Submission Summary
+
+### 1. Source Code
+* **GitHub Repository**: [https://github.com/rasmiranjanpatnaik/transaction-ledger-syste](https://github.com/rasmiranjanpatnaik/transaction-ledger-syste)
+* **Live Web Dashboard & API**: [https://transaction-ledger-syste.onrender.com/](https://transaction-ledger-syste.onrender.com/)
+* **Connected Cloud Database**: Supabase PostgreSQL (`ap-northeast-1` pooler)
+
+### 2. README & Quickstart
+* **Local Run**:
+  ```bash
+  npm install
+  npm test          # Runs all 30 tests across 5 suites
+  npm run build     # Builds TypeScript to dist/
+  npm start         # Starts server on http://localhost:3000
+  ```
+* **Interactive Web Dashboard**: Accessible at `http://localhost:3000/` or live at [https://transaction-ledger-syste.onrender.com/](https://transaction-ledger-syste.onrender.com/).
+
+### 3. API Documentation
+* **OpenAPI 3.0 / Swagger UI**: Available at `/docs` ([Live Swagger UI](https://transaction-ledger-syste.onrender.com/docs)).
+* **Endpoints**:
+  * `POST /api/accounts`: Create an account (`initial_balance = 0` enforced).
+  * `GET /api/accounts/:id/balance`: Fetch current balance.
+  * `GET /api/accounts/:id`: Fetch account details.
+  * `GET /api/accounts`: List all accounts.
+  * `POST /api/accounts/:accountId/transactions`: Add a credit or debit transaction.
+  * `POST /api/transactions`: Add a transaction (with `account_id` in request body).
+  * `GET /api/accounts/:accountId/transactions`: Paginated transaction history with filtering (`type=credit|debit`), pagination (`page`, `limit`), and latest-first sorting.
+  * `POST /api/transfers`: **Bonus** atomic cross-account money transfer.
+  * `GET /api/health`: Service health check.
+
+### 4. Assumptions & System Invariants
+1. **Monetary Precision & Storage**:
+   * Amounts are stored in the database as **integer cents** (e.g. `$100.50` = `10050` cents).
+   * This eliminates floating-point drift inherent in IEEE-754 arithmetic (avoiding `0.1 + 0.2 = 0.30000000000000004`).
+   * Financial inputs are validated to allow at most 2 decimal places. Negative and zero amounts are rejected (`amount > 0`).
+2. **Account Balances**:
+   * Initial balance is strictly `0`. Clients are forbidden from supplying a `balance` when creating an account; requests attempting to do so are rejected with `400 Bad Request`.
+   * Overdrafts are physically impossible: enforced at the application layer AND at the database engine level via `CHECK (balance >= 0)`.
+3. **Transaction Immutability**:
+   * Transactions and transfers are strictly append-only. Once recorded, they can never be modified or deleted.
+   * Enforced in SQLite and PostgreSQL through `BEFORE UPDATE` and `BEFORE DELETE` triggers that raise an exception (`RAISE EXCEPTION / RAISE(ABORT)`).
+   * HTTP requests using `PUT`, `PATCH`, or `DELETE` on `/api/transactions/*` return `405 Method Not Allowed`.
+4. **Idempotency & Duplicate Prevention**:
+   * A composite unique constraint `UNIQUE (account_id, reference_id)` ensures that a `reference_id` cannot be reused for the same account.
+   * If a duplicate `reference_id` is submitted for the same account, the balance remains unaffected, no transaction is created, and the API returns `409 Conflict`.
+   * The same `reference_id` is allowed across different accounts.
+5. **Atomicity & Concurrency**:
+   * Adding a transaction and updating an account balance is treated as a single atomic unit using `BEGIN IMMEDIATE` (SQLite) / transaction blocks (PostgreSQL).
+   * Failed or rejected transactions are rolled back completely and never alter balances.
+   * Transfers between two accounts are executed within a single transaction locking both accounts to prevent deadlocks and partial transfers.
