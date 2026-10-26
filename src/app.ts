@@ -1,6 +1,8 @@
 import cors from 'cors';
 import express, { Express, Request, Response } from 'express';
+import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import swaggerUi from 'swagger-ui-express';
 import { AccountController } from './controllers/account.controller.js';
@@ -41,8 +43,21 @@ export function createApp(db?: DatabaseSync): Express {
   app.use(cors());
   app.use(express.json());
 
-  // Static website UI
-  const publicPath = path.resolve(process.cwd(), 'public');
+  // Determine public folder path
+  let publicPath = path.resolve(process.cwd(), 'public');
+  if (!fs.existsSync(publicPath)) {
+    try {
+      const currentDir = path.dirname(fileURLToPath(import.meta.url));
+      const altPath = path.resolve(currentDir, '../public');
+      if (fs.existsSync(altPath)) {
+        publicPath = altPath;
+      }
+    } catch {
+      // fallback to cwd/public
+    }
+  }
+
+  // Serve static assets from public/
   app.use(express.static(publicPath));
 
   // Swagger UI and OpenAPI documentation
@@ -94,10 +109,11 @@ export function createApp(db?: DatabaseSync): Express {
     })
   );
 
-  // Root endpoint: serve web dashboard if HTML accepted, otherwise API info
+  // Root endpoint: serve web dashboard if HTML accepted and index.html exists
   app.get('/', (req: Request, res: Response) => {
-    if (req.accepts('html')) {
-      res.sendFile(path.join(publicPath, 'index.html'));
+    const indexPath = path.join(publicPath, 'index.html');
+    if (req.accepts('html') && fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
     } else {
       res.json({
         name: 'Transaction Ledger System API',
