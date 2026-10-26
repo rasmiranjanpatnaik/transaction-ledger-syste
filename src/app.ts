@@ -1,5 +1,6 @@
 import cors from 'cors';
 import express, { Express, Request, Response } from 'express';
+import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import swaggerUi from 'swagger-ui-express';
 import { AccountController } from './controllers/account.controller.js';
@@ -39,6 +40,10 @@ export function createApp(db?: DatabaseSync): Express {
   // Standard middleware
   app.use(cors());
   app.use(express.json());
+
+  // Static website UI
+  const publicPath = path.resolve(process.cwd(), 'public');
+  app.use(express.static(publicPath));
 
   // Swagger UI and OpenAPI documentation
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
@@ -89,14 +94,18 @@ export function createApp(db?: DatabaseSync): Express {
     })
   );
 
-  // Fallback for root
-  app.get('/', (_req: Request, res: Response) => {
-    res.json({
-      name: 'Transaction Ledger System API',
-      status: 'active',
-      docs: '/docs',
-      health: '/api/health',
-    });
+  // Root endpoint: serve web dashboard if HTML accepted, otherwise API info
+  app.get('/', (req: Request, res: Response) => {
+    if (req.accepts('html')) {
+      res.sendFile(path.join(publicPath, 'index.html'));
+    } else {
+      res.json({
+        name: 'Transaction Ledger System API',
+        status: 'active',
+        docs: '/docs',
+        health: '/api/health',
+      });
+    }
   });
 
   // 404 Route Not Found

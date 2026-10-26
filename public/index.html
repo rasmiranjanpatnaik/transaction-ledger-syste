@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transaction Ledger System | Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            primary: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .fade-in { animation: fadeIn 0.2s ease-in-out; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col antialiased">
+
+  <!-- Navigation Bar -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div>
+          <span class="font-bold text-lg text-white tracking-tight">LedgerPay</span>
+          <span class="ml-2 text-xs font-semibold uppercase px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">Supabase Connected</span>
+        </div>
+      </div>
+      <div class="flex items-center space-x-3">
+        <a href="/docs" target="_blank" class="text-sm font-medium text-slate-400 hover:text-white px-3 py-1.5 rounded-lg border border-slate-700 hover:border-slate-600 transition flex items-center space-x-2">
+          <span>Swagger API Docs</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+        </a>
+        <button onclick="openModal('createAccountModal')" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm px-4 py-2 rounded-lg transition shadow-sm shadow-indigo-600/30 flex items-center space-x-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span>New Account</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- Top KPI Metrics -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 shadow-sm">
+        <div class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Accounts</div>
+        <div id="metricTotalAccounts" class="mt-2 text-3xl font-bold text-white">0</div>
+        <div class="mt-1 text-xs text-slate-500">Active ledger accounts</div>
+      </div>
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 shadow-sm">
+        <div class="text-xs font-medium text-slate-400 uppercase tracking-wider">Active Account Balance</div>
+        <div id="metricSelectedBalance" class="mt-2 text-3xl font-bold text-emerald-400">$0.00</div>
+        <div id="metricSelectedName" class="mt-1 text-xs text-slate-500">Select an account</div>
+      </div>
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 shadow-sm">
+        <div class="text-xs font-medium text-slate-400 uppercase tracking-wider">Database Status</div>
+        <div class="mt-2 text-lg font-semibold text-emerald-400 flex items-center space-x-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>Supabase Cloud</span>
+        </div>
+        <div class="mt-1 text-xs text-slate-500">PostgreSQL (ACID WAL)</div>
+      </div>
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 shadow-sm">
+        <div class="text-xs font-medium text-slate-400 uppercase tracking-wider">Quick Actions</div>
+        <div class="mt-2.5 flex space-x-2">
+          <button onclick="openTransactionModal('credit')" class="flex-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 text-xs font-semibold py-2 px-3 rounded-lg transition text-center">
+            + Credit
+          </button>
+          <button onclick="openTransactionModal('debit')" class="flex-1 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-500/30 text-xs font-semibold py-2 px-3 rounded-lg transition text-center">
+            - Debit
+          </button>
+          <button onclick="openModal('transferModal')" class="flex-1 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 text-xs font-semibold py-2 px-3 rounded-lg transition text-center">
+            ⇄ Transfer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accounts Selector Card -->
+    <div class="bg-slate-800/40 border border-slate-800 rounded-2xl p-6">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-semibold text-white">Selected Account Ledger</h2>
+          <p class="text-xs text-slate-400">View balances, submit credit/debit transactions, or inspect history</p>
+        </div>
+        <div class="flex items-center space-x-3 w-full sm:w-auto">
+          <label class="text-xs text-slate-400 whitespace-nowrap">Switch Account:</label>
+          <select id="accountSelect" onchange="onAccountChange()" class="bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none w-full sm:w-64">
+            <option value="">Loading accounts...</option>
+          </select>
+          <button onclick="loadAccounts()" title="Refresh Accounts" class="p-2 text-slate-400 hover:text-white bg-slate-900 border border-slate-700 rounded-lg hover:border-slate-600 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Account Info Pill Bar -->
+      <div id="accountBanner" class="mt-5 pt-5 border-t border-slate-800 flex flex-wrap items-center justify-between gap-4 hidden">
+        <div class="flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-lg uppercase" id="accountAvatar">A</div>
+          <div>
+            <div class="text-base font-bold text-white flex items-center space-x-2">
+              <span id="bannerAccountName">Alice</span>
+              <span class="text-xs font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded cursor-pointer" onclick="copyAccountId()" title="Click to copy ID">
+                ID: <span id="bannerAccountId">...</span>
+              </span>
+            </div>
+            <div class="text-xs text-slate-400 mt-0.5">Created: <span id="bannerCreatedAt">-</span></div>
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="text-xs font-medium text-slate-400">Current Balance</div>
+          <div id="bannerAccountBalance" class="text-2xl font-bold text-emerald-400">$0.00</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transaction History Section -->
+    <div class="bg-slate-800/40 border border-slate-800 rounded-2xl overflow-hidden">
+      <div class="p-6 border-b border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h3 class="text-base font-semibold text-white">Transaction History</h3>
+          <p class="text-xs text-slate-400">Immutable ledger entries ordered latest-first</p>
+        </div>
+        
+        <!-- Filters -->
+        <div class="flex items-center space-x-2">
+          <button onclick="setFilterType('')" id="filterAll" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white transition">All</button>
+          <button onclick="setFilterType('credit')" id="filterCredit" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 text-slate-300 hover:text-white transition">Credits</button>
+          <button onclick="setFilterType('debit')" id="filterDebit" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 text-slate-300 hover:text-white transition">Debits</button>
+        </div>
+      </div>
+
+      <!-- Transactions Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-slate-300">
+          <thead class="text-xs uppercase bg-slate-900/60 text-slate-400 border-b border-slate-800">
+            <tr>
+              <th scope="col" class="py-3.5 px-6">Type</th>
+              <th scope="col" class="py-3.5 px-6">Amount</th>
+              <th scope="col" class="py-3.5 px-6">Description</th>
+              <th scope="col" class="py-3.5 px-6">Reference ID</th>
+              <th scope="col" class="py-3.5 px-6">Date & Time</th>
+            </tr>
+          </thead>
+          <tbody id="transactionsTableBody" class="divide-y divide-slate-800/60">
+            <tr>
+              <td colspan="5" class="py-8 text-center text-slate-500">Select an account above to view transactions</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination Footer -->
+      <div class="p-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+        <div id="paginationInfo">Showing 0 of 0 records</div>
+        <div class="flex items-center space-x-2">
+          <button id="btnPrevPage" onclick="changePage(-1)" disabled class="px-3 py-1.5 rounded-lg border border-slate-700 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-700/50 transition">Previous</button>
+          <span id="pageNumberDisplay" class="px-2 font-medium text-slate-200">1</span>
+          <button id="btnNextPage" onclick="changePage(1)" disabled class="px-3 py-1.5 rounded-lg border border-slate-700 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-700/50 transition">Next</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal: Create Account -->
+  <div id="createAccountModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-bold text-white">Create New Account</h3>
+        <button onclick="closeModal('createAccountModal')" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+      <p class="text-xs text-slate-400">Accounts are strictly initialized with an initial balance of $0.00.</p>
+      <form onsubmit="handleCreateAccount(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Account Holder Name *</label>
+          <input type="text" id="newAccountName" required placeholder="e.g. Alice Smith" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="pt-2 flex space-x-3">
+          <button type="button" onclick="closeModal('createAccountModal')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm py-2 rounded-lg transition">Cancel</button>
+          <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium py-2 rounded-lg transition">Create Account</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Add Transaction -->
+  <div id="transactionModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 id="txModalTitle" class="text-lg font-bold text-white">Add Transaction</h3>
+        <button onclick="closeModal('transactionModal')" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+      <form onsubmit="handleAddTransaction(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Transaction Type</label>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" id="btnTypeCredit" onclick="setTxType('credit')" class="py-2 text-xs font-semibold rounded-lg border border-emerald-500 bg-emerald-500/20 text-emerald-400">Credit (+)</button>
+            <button type="button" id="btnTypeDebit" onclick="setTxType('debit')" class="py-2 text-xs font-semibold rounded-lg border border-slate-700 bg-slate-800 text-slate-400">Debit (-)</button>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Amount ($) *</label>
+          <input type="number" id="txAmount" step="0.01" min="0.01" required placeholder="0.00" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-xs font-medium text-slate-300">Reference ID *</label>
+            <button type="button" onclick="generateReference()" class="text-xs text-indigo-400 hover:underline">Generate</button>
+          </div>
+          <input type="text" id="txReference" required placeholder="e.g. REF-1001" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Description</label>
+          <input type="text" id="txDescription" placeholder="e.g. Salary, Groceries, Dinner" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="pt-2 flex space-x-3">
+          <button type="button" onclick="closeModal('transactionModal')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm py-2 rounded-lg transition">Cancel</button>
+          <button type="submit" id="btnSubmitTx" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium py-2 rounded-lg transition">Submit Transaction</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Money Transfer -->
+  <div id="transferModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-bold text-white">Transfer Funds (Atomic)</h3>
+        <button onclick="closeModal('transferModal')" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+      <p class="text-xs text-slate-400">Instantly and atomically transfers funds from Source to Destination.</p>
+      <form onsubmit="handleTransfer(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Source Account (Debit) *</label>
+          <select id="transferSource" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Destination Account (Credit) *</label>
+          <select id="transferDest" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Transfer Amount ($) *</label>
+          <input type="number" id="transferAmount" step="0.01" min="0.01" required placeholder="0.00" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-xs font-medium text-slate-300">Reference ID *</label>
+            <button type="button" onclick="generateTransferReference()" class="text-xs text-indigo-400 hover:underline">Generate</button>
+          </div>
+          <input type="text" id="transferReference" required placeholder="e.g. TXFR-2001" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Description</label>
+          <input type="text" id="transferDescription" placeholder="e.g. Bill share, Freelance invoice" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="pt-2 flex space-x-3">
+          <button type="button" onclick="closeModal('transferModal')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm py-2 rounded-lg transition">Cancel</button>
+          <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium py-2 rounded-lg transition">Execute Transfer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
+
+  <!-- JavaScript Application Logic -->
+  <script>
+    let accounts = [];
+    let currentAccountId = null;
+    let currentFilterType = '';
+    let currentPage = 1;
+    const pageLimit = 10;
+    let selectedTxType = 'credit';
+
+    // Format currency
+    function formatMoney(amount) {
+      return '$' + Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // Format Date
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      const d = new Date(dateStr);
+      return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    // Toast Notification
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const isError = type === 'error';
+      toast.className = `fade-in px-4 py-3 rounded-xl shadow-lg border text-sm flex items-center space-x-2 text-white ${
+        isError ? 'bg-rose-900/90 border-rose-700' : 'bg-emerald-900/90 border-emerald-700'
+      }`;
+      toast.innerHTML = `
+        <span>${isError ? '⚠️' : '✅'}</span>
+        <span>${message}</span>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // Modal Control
+    function openModal(id) {
+      document.getElementById(id).classList.remove('hidden');
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    // Load Accounts
+    async function loadAccounts() {
+      try {
+        const res = await fetch('/api/accounts');
+        const data = await res.json();
+        if (data.success) {
+          accounts = data.data;
+          document.getElementById('metricTotalAccounts').innerText = accounts.length;
+          renderAccountDropdowns();
+
+          if (accounts.length > 0) {
+            if (!currentAccountId || !accounts.find(a => a.id === currentAccountId)) {
+              currentAccountId = accounts[0].id;
+            }
+            renderSelectedAccount();
+            loadTransactions();
+          } else {
+            document.getElementById('accountBanner').classList.add('hidden');
+            document.getElementById('transactionsTableBody').innerHTML = `
+              <tr><td colspan="5" class="py-8 text-center text-slate-500">No accounts yet. Click "New Account" to get started!</td></tr>
+            `;
+          }
+        }
+      } catch (err) {
+        showToast('Failed to load accounts: ' + err.message, 'error');
+      }
+    }
+
+    function renderAccountDropdowns() {
+      const select = document.getElementById('accountSelect');
+      const sourceSelect = document.getElementById('transferSource');
+      const destSelect = document.getElementById('transferDest');
+
+      select.innerHTML = '';
+      sourceSelect.innerHTML = '<option value="">Select source account...</option>';
+      destSelect.innerHTML = '<option value="">Select destination account...</option>';
+
+      accounts.forEach(acc => {
+        const opt = document.createElement('option');
+        opt.value = acc.id;
+        opt.innerText = `${acc.name} (${formatMoney(acc.balance)})`;
+        if (acc.id === currentAccountId) opt.selected = true;
+        select.appendChild(opt);
+
+        const optS = opt.cloneNode(true);
+        const optD = opt.cloneNode(true);
+        sourceSelect.appendChild(optS);
+        destSelect.appendChild(optD);
+      });
+    }
+
+    function onAccountChange() {
+      const select = document.getElementById('accountSelect');
+      currentAccountId = select.value;
+      currentPage = 1;
+      renderSelectedAccount();
+      loadTransactions();
+    }
+
+    function renderSelectedAccount() {
+      const acc = accounts.find(a => a.id === currentAccountId);
+      if (!acc) return;
+
+      document.getElementById('accountBanner').classList.remove('hidden');
+      document.getElementById('accountAvatar').innerText = acc.name.charAt(0);
+      document.getElementById('bannerAccountName').innerText = acc.name;
+      document.getElementById('bannerAccountId').innerText = acc.id.slice(0, 8) + '...';
+      document.getElementById('bannerCreatedAt').innerText = formatDate(acc.created_at);
+      document.getElementById('bannerAccountBalance').innerText = formatMoney(acc.balance);
+
+      document.getElementById('metricSelectedBalance').innerText = formatMoney(acc.balance);
+      document.getElementById('metricSelectedName').innerText = acc.name;
+    }
+
+    function copyAccountId() {
+      if (currentAccountId) {
+        navigator.clipboard.writeText(currentAccountId);
+        showToast('Account ID copied to clipboard!');
+      }
+    }
+
+    // Transactions History
+    async function loadTransactions() {
+      if (!currentAccountId) return;
+      const tbody = document.getElementById('transactionsTableBody');
+      tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500">Loading transactions...</td></tr>`;
+
+      try {
+        let url = `/api/accounts/${currentAccountId}/transactions?page=${currentPage}&limit=${pageLimit}`;
+        if (currentFilterType) {
+          url += `&type=${currentFilterType}`;
+        }
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.success) {
+          const items = data.data;
+          const pagination = data.pagination;
+
+          if (items.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-500">No transactions recorded for this filter.</td></tr>`;
+          } else {
+            tbody.innerHTML = items.map(tx => {
+              const isCredit = tx.type === 'credit';
+              return `
+                <tr class="hover:bg-slate-800/30 transition">
+                  <td class="py-3 px-6">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+                      isCredit ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                    }">
+                      ${isCredit ? '↑ Credit' : '↓ Debit'}
+                    </span>
+                  </td>
+                  <td class="py-3 px-6 font-semibold ${isCredit ? 'text-emerald-400' : 'text-rose-400'}">
+                    ${isCredit ? '+' : '-'}${formatMoney(tx.amount)}
+                  </td>
+                  <td class="py-3 px-6 text-slate-300">${tx.description || '<span class="text-slate-600">None</span>'}</td>
+                  <td class="py-3 px-6 font-mono text-xs text-slate-400">${tx.reference_id}</td>
+                  <td class="py-3 px-6 text-xs text-slate-400">${formatDate(tx.created_at)}</td>
+                </tr>
+              `;
+            }).join('');
+          }
+
+          // Pagination UI
+          document.getElementById('paginationInfo').innerText = `Showing ${items.length} of ${pagination.total_records} records (Page ${pagination.current_page} of ${pagination.total_pages || 1})`;
+          document.getElementById('pageNumberDisplay').innerText = pagination.current_page;
+          document.getElementById('btnPrevPage').disabled = pagination.current_page <= 1;
+          document.getElementById('btnNextPage').disabled = pagination.current_page >= pagination.total_pages;
+        }
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-rose-400">Failed to load transactions: ${err.message}</td></tr>`;
+      }
+    }
+
+    function setFilterType(type) {
+      currentFilterType = type;
+      currentPage = 1;
+      
+      const btnAll = document.getElementById('filterAll');
+      const btnCredit = document.getElementById('filterCredit');
+      const btnDebit = document.getElementById('filterDebit');
+
+      [btnAll, btnCredit, btnDebit].forEach(b => {
+        b.className = 'px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 text-slate-300 hover:text-white transition';
+      });
+
+      if (!type) btnAll.className = 'px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white transition';
+      if (type === 'credit') btnCredit.className = 'px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 text-white transition';
+      if (type === 'debit') btnDebit.className = 'px-3 py-1.5 text-xs font-medium rounded-lg bg-rose-600 text-white transition';
+
+      loadTransactions();
+    }
+
+    function changePage(delta) {
+      currentPage += delta;
+      loadTransactions();
+    }
+
+    // Create Account Handler
+    async function handleCreateAccount(e) {
+      e.preventDefault();
+      const name = document.getElementById('newAccountName').value.trim();
+      if (!name) return;
+
+      try {
+        const res = await fetch('/api/accounts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`Account "${data.data.name}" created with balance $0.00!`);
+          closeModal('createAccountModal');
+          document.getElementById('newAccountName').value = '';
+          currentAccountId = data.data.id;
+          await loadAccounts();
+        } else {
+          showToast(data.error?.message || 'Failed to create account', 'error');
+        }
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    // Add Transaction Handler
+    function openTransactionModal(type) {
+      if (!currentAccountId) {
+        showToast('Please create or select an account first', 'error');
+        return;
+      }
+      setTxType(type);
+      generateReference();
+      document.getElementById('txAmount').value = '';
+      document.getElementById('txDescription').value = '';
+      openModal('transactionModal');
+    }
+
+    function setTxType(type) {
+      selectedTxType = type;
+      const btnCredit = document.getElementById('btnTypeCredit');
+      const btnDebit = document.getElementById('btnTypeDebit');
+      const btnSubmit = document.getElementById('btnSubmitTx');
+
+      if (type === 'credit') {
+        btnCredit.className = 'py-2 text-xs font-semibold rounded-lg border border-emerald-500 bg-emerald-500/20 text-emerald-400';
+        btnDebit.className = 'py-2 text-xs font-semibold rounded-lg border border-slate-700 bg-slate-800 text-slate-400';
+        btnSubmit.className = 'flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium py-2 rounded-lg transition';
+        btnSubmit.innerText = 'Credit Account (+)';
+      } else {
+        btnCredit.className = 'py-2 text-xs font-semibold rounded-lg border border-slate-700 bg-slate-800 text-slate-400';
+        btnDebit.className = 'py-2 text-xs font-semibold rounded-lg border border-rose-500 bg-rose-500/20 text-rose-400';
+        btnSubmit.className = 'flex-1 bg-rose-600 hover:bg-rose-500 text-white text-sm font-medium py-2 rounded-lg transition';
+        btnSubmit.innerText = 'Debit Account (-)';
+      }
+    }
+
+    function generateReference() {
+      document.getElementById('txReference').value = 'REF-' + Math.floor(100000 + Math.random() * 900000);
+    }
+
+    async function handleAddTransaction(e) {
+      e.preventDefault();
+      const amount = parseFloat(document.getElementById('txAmount').value);
+      const reference_id = document.getElementById('txReference').value.trim();
+      const description = document.getElementById('txDescription').value.trim();
+
+      try {
+        const res = await fetch(`/api/accounts/${currentAccountId}/transactions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: selectedTxType,
+            amount,
+            reference_id,
+            description,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`${selectedTxType.toUpperCase()} of ${formatMoney(amount)} processed! New balance: ${formatMoney(data.data.account_balance)}`);
+          closeModal('transactionModal');
+          await loadAccounts();
+          await loadTransactions();
+        } else {
+          showToast(data.error?.message || 'Transaction rejected', 'error');
+        }
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    // Transfer Handler
+    function generateTransferReference() {
+      document.getElementById('transferReference').value = 'TXFR-' + Math.floor(100000 + Math.random() * 900000);
+    }
+
+    async function handleTransfer(e) {
+      e.preventDefault();
+      const sourceId = document.getElementById('transferSource').value;
+      const destId = document.getElementById('transferDest').value;
+      const amount = parseFloat(document.getElementById('transferAmount').value);
+      const reference_id = document.getElementById('transferReference').value.trim();
+      const description = document.getElementById('transferDescription').value.trim();
+
+      if (sourceId === destId) {
+        showToast('Source and Destination accounts must be different!', 'error');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/transfers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            source_account_id: sourceId,
+            destination_account_id: destId,
+            amount,
+            reference_id,
+            description,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`Transferred ${formatMoney(amount)} successfully!`);
+          closeModal('transferModal');
+          await loadAccounts();
+          await loadTransactions();
+        } else {
+          showToast(data.error?.message || 'Transfer failed', 'error');
+        }
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    // Initial load
+    window.addEventListener('DOMContentLoaded', () => {
+      loadAccounts();
+    });
+  </script>
+</body>
+</html>
