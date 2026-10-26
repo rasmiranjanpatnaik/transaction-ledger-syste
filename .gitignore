@@ -1,0 +1,5 @@
+node_modules/
+dist/
+ledger.db*
+*.log
+.env
